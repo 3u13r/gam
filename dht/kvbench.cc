@@ -89,6 +89,7 @@ void populate(FILE * fp, kvClient* cli) {
 }
 
 void benchmark(FILE* fp, kvClient* cli) {
+  epicLog(LOG_WARNING, "benchmark start");
   uint64_t start = mstime();
   char key[KEY_SIZE];
   kv* kv;
@@ -119,6 +120,8 @@ void benchmark(FILE* fp, kvClient* cli) {
       last_report = current;
     }
   }
+
+  epicLog(LOG_WARNING, "benchmark loop end");
 
   double duration = mstime() - start;
   double gets = get_finished.load(), sets = set_finished.load();
@@ -176,7 +179,10 @@ void* do_work(void* fname) {
     alloc->Put(client_id, &v, 1);
     for (i = 0; i < no_client; i++) {
       vs[i] = 0;
-      while (vs[i] != 2) alloc->Get(i, &vs[i]);
+      while (vs[i] != 2) {
+        alloc->Get(i, &vs[i]);
+        epicLog(LOG_WARNING, "waiting %d", i);
+      }
     }
     pthread_cond_broadcast(&cv);
   } else {
@@ -189,6 +195,7 @@ void* do_work(void* fname) {
   finished.store(1);
   rewind(fp);
   benchmark(fp, cli);
+  epicLog(LOG_WARNING, "benchmark exited");
 
   // synchronize among benchmark threads
   pthread_mutex_lock(&cnt_mutex);
@@ -197,7 +204,11 @@ void* do_work(void* fname) {
     alloc->Put(client_id, &v, 1);
     for (i = 0; i < no_client; i++) {
       vs[i] = 0;
-      while (vs[i] != 3) alloc->Get(i, &vs[i]);
+      while (vs[i] != 3) {
+        epicLog(LOG_WARNING, "waiting end %d before", i);
+        alloc->Get(i, &vs[i]);
+        epicLog(LOG_WARNING, "waiting end %d after", i);
+      }
     }
     pthread_cond_broadcast(&cv);
   } else {

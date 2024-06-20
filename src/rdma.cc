@@ -30,6 +30,7 @@ RdmaResource::RdmaResource(ibv_device *dev, bool master)
       recv_posted(0) {
 
   epicLog(LOG_DEBUG, "new rdma resource\n");
+  PrintStackTrace();
 
   if (!(context = ibv_open_device(dev))) {
     epicLog(LOG_FATAL, "unable to get context for %s\n",

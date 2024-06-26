@@ -24,6 +24,7 @@ void AcceptTcpClientHandle(aeEventLoop *el, int fd, void *data, int mask) {
   char cip[IP_STR_LEN];
   int cfd, cport;
 
+  epicLog(LOG_DEBUG, "Accepting client connection on fd %d", fd);
   cfd = anetTcpAccept(neterr, fd, cip, sizeof(cip), &cport);
   if (cfd == ANET_ERR) {
     if (errno != EWOULDBLOCK)
@@ -64,6 +65,8 @@ void AcceptTcpClientHandle(aeEventLoop *el, int fd, void *data, int mask) {
     server->PostAcceptWorker(cfd, server);
 
   out: close(cfd);
+
+  epicLog(LOG_DEBUG, "AcceptTcpClientHandle for IP %s, port %d done", cip, cport);
 }
 
 void ProcessRdmaRequestHandle(aeEventLoop *el, int fd, void *data, int mask) {

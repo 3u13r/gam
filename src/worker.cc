@@ -540,12 +540,14 @@ unsigned long long Worker::SubmitRequest(Client* cli, WorkRequest* wr, int flag,
     if (sbuf == nullptr) {
       busy = true;
       sbuf = (char *) zmalloc(MAX_REQUEST_SIZE);
-      epicLog(LOG_INFO,
+      epicLog(LOG_WARNING,
           "We don't have enough slot buf, we use local buf instead");
     }
     int len;
     int ret = wr->Ser(sbuf, len);
     epicAssert(!ret);
+    epicLog(LOG_WARNING, "send request %d to worker %d, len = %d", wr->op,
+        cli->GetWorkerId(), len);
     if ((ret = cli->Send(sbuf, len)) != len) {
       epicAssert(ret == -1);
       epicLog(LOG_INFO, "sent failed: slots are busy");

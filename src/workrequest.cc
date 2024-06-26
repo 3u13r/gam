@@ -139,7 +139,10 @@ int WorkRequest::Ser(char* buf, int& len) {
       break;
   }
   buf[len] = '\0';
-  epicLog(LOG_DEBUG, "ser %s", buf);
+  // // Print the serialized buffer as hex
+  // for (int i = 0; i < len; i++) {
+  //   epicLog(LOG_WARNING, "[SER] buf[%d] = %x", i, buf[i]);
+  // }
   return 0;
 }
 
@@ -151,6 +154,8 @@ int WorkRequest::Deser(const char* buf, int& len) {
   p += readInteger(p, lop);
   op = static_cast<Work>(lop);
   stype s;
+
+  epicLog(LOG_WARNING, "op = %d", op);
   switch (op) {
 #ifdef DHT
     case GET_HTABLE:
@@ -277,7 +282,8 @@ int WorkRequest::Deser(const char* buf, int& len) {
       break;
 
     default:
-      epicLog(LOG_WARNING, "unrecognized op code %d", op);
+      epicLog(LOG_WARNING, "unrecognized op code %d, len = %d", op, len);
+      epicLog(LOG_WARNING, "received %s", buf);
       break;
   }
 

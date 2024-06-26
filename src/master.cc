@@ -160,6 +160,8 @@ void Master::ProcessRequest(Client* client, WorkRequest* wr) {
       lwr.ptr = buf;
       int len = 0, ret;
       lwr.Ser(send_buf, len);
+      epicLog(LOG_WARNING, "send FETCH_MEM_STATS_REPLY to worker %d, len = %d",
+              client->GetWorkerId(), len);
       if ((ret = client->Send(send_buf, len)) != len) {
         epicAssert(ret == -1);
         epicLog(LOG_INFO, "slots are busy");
@@ -207,6 +209,8 @@ void Master::ProcessRequest(Client* client, WorkRequest* wr) {
 
         int len = 0, ret;
         wr->Ser(send_buf, len);
+        epicLog(LOG_WARNING, "send GET_REPLY to worker %d, len = %d",
+                client->GetWorkerId(), len);
         if ((ret = client->Send(send_buf, len)) != len) {
           epicAssert(ret == -1);
           epicLog(LOG_INFO, "slots are busy");
@@ -240,6 +244,7 @@ void Master::Broadcast(const char* buf, size_t len) {
     }
     memcpy(send_buf, buf, len);
 
+    epicLog(LOG_WARNING, "broadcast to worker %d, len = %d", entry.second->GetWorkerId(), len);
     size_t sent = entry.second->Send(send_buf, len);
     epicAssert((busy && sent == -1) || !busy);
     if (len != sent) {

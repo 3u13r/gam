@@ -76,6 +76,10 @@ void* SlabAllocator::mmap_malloc(size_t size) {
 //	if(posix_memalign(&ret, BLOCK_SIZE, size)){
 //		epicLog(LOG_FATAL, "allocate memory %ld failed (%d:%s)", size, errno, strerror(errno));
 //	}
+
+  // Init mem to zero
+  memset(ret, 0, size);
+
   return ret;
 }
 
@@ -162,6 +166,7 @@ void* SlabAllocator::slabs_init(const size_t limit, const double factor,
   if (prealloc) {
     slabs_preallocate(power_largest);
   }
+  epicLog(LOG_DEBUG, "slabs @ %lx\n", mem_base);
   return mem_base;
 }
 

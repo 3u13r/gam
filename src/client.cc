@@ -23,6 +23,7 @@ Client::Client(RdmaResource* res, bool isForMaster, const char* rdmaConnStr)
 int Client::ExchConnParam(const char* ip, int port, Server* server) {
   //open the socket to exch rdma resouces
   char neterr[ANET_ERR_LEN];
+  epicLog(LOG_DEBUG, "Connecting to %s:%d", ip, port);
   int sockfd = anetTcpConnect(neterr, const_cast<char *>(ip), port);
   if (sockfd < 0) {
     epicLog(LOG_WARNING, "Connecting to %s:%d %s", ip, port, neterr);
@@ -67,10 +68,13 @@ int Client::SetRemoteConnParam(const char *conn) {
   const char* p = conn;
   if (resource->IsMaster()) {  //in the Master thread, connected to worker
     wid = resource->GetCounter();
+    epicLog(LOG_DEBUG, "master to worker here, wid = %d", wid);
   } else if (IsForMaster()) {  //in the worker thread, but connected to Master
     sscanf(conn, "%x:", &wid);
+    epicLog(LOG_DEBUG, "worker to master here, wid = %d", wid);
   } else if (!resource->IsMaster()) {  //in the worker thread, and connected to worker
     sscanf(conn, "%x:", &wid);
+    epicLog(LOG_DEBUG, "worker to worker here, wid = %d", wid);
   } else {
     epicLog(LOG_WARNING, "undefined cases");
   }

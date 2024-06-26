@@ -6,6 +6,7 @@
 #include <cerrno>
 #include <cstring>
 #include <climits>
+#include <sys/mman.h>
 #include <arpa/inet.h>
 
 #include "rdma.h"
@@ -62,6 +63,7 @@ RdmaResource::RdmaResource(ibv_device *dev, bool master)
     attr.attr.max_wr = rx_depth;
     attr.attr.max_sge = 1;
 
+    epicLog(LOG_DEBUG, "Creating srq for pd %p with handle %d\n", pd, pd->handle);
     if (!(srq = ibv_create_srq(this->pd, &attr))) {
       epicLog(LOG_FATAL, "Unable to create srq\n");
       goto clean_cq;
@@ -119,6 +121,8 @@ int RdmaResource::RegLocalMemory(void *base, size_t sz) {
     return ret;
   }
 
+  epicLog(LOG_DEBUG, "trying to register memory at %p with size %d\n", base, sz);
+
   bmr = ibv_reg_mr(
       this->pd,
       const_cast<void *>(base),
@@ -147,7 +151,10 @@ int RdmaResource::RegCommSlot(int slot) {
     int i = slots.size();
     for (; i < slot_inuse; i += RECV_SLOT_STEP) {
       int sz = roundup(RECV_SLOT_STEP*MAX_REQUEST_SIZE, page_size);
-      void* buf = zmalloc(sz);
+      //void* buf = zmalloc(sz);
+      void* buf = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+      // Init mem to 0
+      memset(buf, 0, sz);
       struct ibv_mr *mr = ibv_reg_mr(
           this->pd,
           buf,
@@ -371,14 +378,18 @@ RdmaContext::RdmaContext(RdmaResource *res, bool master)
       max_pending_msg > HW_MAX_PENDING ? HW_MAX_PENDING : max_pending_msg;
   int max_buf_size = IsMaster() ? MASTER_BUFFER_SIZE : WORKER_BUFFER_SIZE;
 
-  void* buf = zmalloc(roundup(max_buf_size, page_size));
+  // void* buf = zmalloc(roundup(max_buf_size, page_size));
+  void* buf = mmap(NULL, roundup(max_buf_size, page_size), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
   if (unlikely(!buf)) {
     epicLog(LOG_WARNING, "Unable to allocate memeory\n");
     goto send_buf_err;
   }
+  // init mem to 0
+  memset(buf, 0, roundup(max_buf_size, page_size));
 
   //init the send buf
-  send_buf = ibv_reg_mr(res->pd, buf, max_buf_size,
+  epicLog(LOG_WARNING, "Allocating %d bytes for send_buf @ %p\n", max_buf_size, buf);
+  send_buf = ibv_reg_mr(res->pd, buf, roundup(max_buf_size, page_size),
                         IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
   if (unlikely(!send_buf)) {
     epicLog(LOG_WARNING, "Unable to register mr\n");
@@ -470,6 +481,9 @@ int RdmaContext::SetRemoteConnParam(const char *conn) {
     this->rkey = rrkey;
     this->vaddr = rvaddr;
   }
+
+  epicLog(LOG_DEBUG, "isMaster = %d, rlid = %x, rqpn = %x, rpsn = %x, rrkey = %x, rvaddr = %lx\n",
+          IsMaster(), rlid, rqpn, rpsn, rrkey, rvaddr);
 
   /* modify qp to RTR state */
   {
@@ -628,7 +642,9 @@ ssize_t RdmaContext::Rdma(ibv_wr_opcode op, const void* src, size_t len,
     } else {
       if (IsRegistered(src)) {
         pending_send_msg++;
-        epicLog(LOG_DEBUG, "Registered mem");
+        epicLog(LOG_WARNING, "Registered mem");
+      } else {
+        epicLog(LOG_WARNING, "Unregistered mem");
       }
       sge_list.addr = (uintptr_t) src;
     }
@@ -693,6 +709,9 @@ ssize_t RdmaContext::Rdma(ibv_wr_opcode op, const void* src, size_t len,
         + ((uint64_t) (curr_to_signaled_send_msg & QUARTER_BITS) << 48)
         + ((uint64_t) (curr_to_signaled_w_r_msg & QUARTER_BITS) << 32);
   }
+
+  epicLog(LOG_DEBUG, "wr.send_flags & IBV_SEND_INLINE: %d\n", wr.send_flags & IBV_SEND_INLINE);
+  epicLog(LOG_DEBUG, "IsRegistered((void *) sge_list.addr): %d\n", IsRegistered((void *) sge_list.addr));
 
   struct ibv_send_wr *bad_wr;
   if (ibv_post_send(qp, &wr, &bad_wr)) {

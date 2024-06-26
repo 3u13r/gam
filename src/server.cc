@@ -13,6 +13,7 @@ Client* Server::NewClient() {
 }
 
 Client* Server::NewClient(const char* rdmaConn) {
+  epicLog(LOG_DEBUG, "new client with rdmaConn %s", rdmaConn);
   return NewClient(IsMaster(), rdmaConn);
 }
 
@@ -73,6 +74,13 @@ void Server::ProcessRdmaRequest(ibv_wc& wc) {
       epicLog(LOG_DEBUG, "Get recv completion event");
       char* data = cli->RecvComp(wc);
       data[wc.byte_len] = '\0';
+      epicLog(LOG_WARNING, "received message with len %d and data %s",
+              wc.byte_len, data);
+
+      // // Print the serialized buffer as hex
+      // for (int i = 0; i < wc.byte_len; i++) {
+      //   epicLog(LOG_WARNING, "[RECV] buf[%d] = %x", i, data[i]);
+      // }
 
 #ifdef MERGE_RDMA_REQUESTS
       //we cannot use split by string since GET/PUT is using binary protocol!!!
@@ -86,6 +94,8 @@ void Server::ProcessRdmaRequest(ibv_wc& wc) {
         } else {
           ProcessRequest(cli, wr);
         }
+        epicLog(LOG_WARNING, "received: pos = %d, len = %d, consumed_len = %d, byte_len = %u, str = %s",
+                data[consumed_len], len, consumed_len, wc.byte_len, data);
         consumed_len += len;
         if (consumed_len < wc.byte_len) {
           if (data[consumed_len] != '\0') {
@@ -128,7 +138,8 @@ void Server::ProcessRdmaRequest(ibv_wc& wc) {
       break;
     }
     default:
-      epicLog(LOG_WARNING, "unknown opcode received %d\n", wc.opcode);
+      epicLog(LOG_WARNING, "unknown opcode received %d, len: %d", wc.opcode,
+              wc.byte_len);
       break;
   }
 }
@@ -139,6 +150,7 @@ void Server::ProcessRdmaRequest() {
 #endif
   int ne;
   ibv_wc wc[MAX_CQ_EVENTS];
+  epicLog(LOG_DEBUG, "pre- 'received RDMA event' \n");
   ibv_cq *cq = resource->GetCompQueue();
 
   epicLog(LOG_DEBUG, "received RDMA event\n");
@@ -175,6 +187,8 @@ Client* Server::FindClient(uint32_t qpn) {
 }
 
 void Server::UpdateWidMap(Client* cli) {
+  epicLog(LOG_DEBUG, "update wid map for worker %d with conn string %s",
+          cli->GetWorkerId(), cli->GetConnString());
   widCliMap[cli->GetWorkerId()] = cli;
 }
 

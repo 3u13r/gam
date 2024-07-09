@@ -78,7 +78,7 @@ void* SlabAllocator::mmap_malloc(size_t size) {
 //	}
 
   // Init mem to zero
-  memset(ret, 0, size);
+  // memset(ret, 0, size);
 
   return ret;
 }

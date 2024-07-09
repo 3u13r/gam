@@ -31,7 +31,6 @@ RdmaResource::RdmaResource(ibv_device *dev, bool master)
       recv_posted(0) {
 
   epicLog(LOG_DEBUG, "new rdma resource\n");
-  PrintStackTrace();
 
   if (!(context = ibv_open_device(dev))) {
     epicLog(LOG_FATAL, "unable to get context for %s\n",
@@ -151,10 +150,10 @@ int RdmaResource::RegCommSlot(int slot) {
     int i = slots.size();
     for (; i < slot_inuse; i += RECV_SLOT_STEP) {
       int sz = roundup(RECV_SLOT_STEP*MAX_REQUEST_SIZE, page_size);
-      //void* buf = zmalloc(sz);
-      void* buf = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+      void* buf = zmalloc(sz);
+      // void* buf = mmap(NULL, sz, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
       // Init mem to 0
-      memset(buf, 0, sz);
+      // memset(buf, 0, sz);
       struct ibv_mr *mr = ibv_reg_mr(
           this->pd,
           buf,
@@ -378,18 +377,19 @@ RdmaContext::RdmaContext(RdmaResource *res, bool master)
       max_pending_msg > HW_MAX_PENDING ? HW_MAX_PENDING : max_pending_msg;
   int max_buf_size = IsMaster() ? MASTER_BUFFER_SIZE : WORKER_BUFFER_SIZE;
 
-  // void* buf = zmalloc(roundup(max_buf_size, page_size));
-  void* buf = mmap(NULL, roundup(max_buf_size, page_size), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+  void* buf = zmalloc(roundup(max_buf_size, page_size));
+  // void* buf = mmap(NULL, roundup(max_buf_size, page_size), PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
   if (unlikely(!buf)) {
     epicLog(LOG_WARNING, "Unable to allocate memeory\n");
+    exit(1);
     goto send_buf_err;
   }
   // init mem to 0
-  memset(buf, 0, roundup(max_buf_size, page_size));
+  // memset(buf, 0, roundup(max_buf_size, page_size));
 
   //init the send buf
   epicLog(LOG_WARNING, "Allocating %d bytes for send_buf @ %p\n", max_buf_size, buf);
-  send_buf = ibv_reg_mr(res->pd, buf, roundup(max_buf_size, page_size),
+  send_buf = ibv_reg_mr(res->pd, buf, max_buf_size,
                         IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_LOCAL_WRITE);
   if (unlikely(!send_buf)) {
     epicLog(LOG_WARNING, "Unable to register mr\n");

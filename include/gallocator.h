@@ -155,10 +155,13 @@ class GAllocFactory {
     }
 
     if (conf->is_master) {
-      if (!master)
+      if (!master) {
+        epicLog(LOG_INFO, "Create master");
         master = MasterFactory::CreateServer(*conf);
+      }
     }
     if (!worker) {
+      epicLog(LOG_INFO, "Create worker");
       worker = WorkerFactory::CreateServer(*conf);
     }
     GAlloc* ret = new GAlloc(worker);

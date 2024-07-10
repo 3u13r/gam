@@ -181,7 +181,6 @@ void* do_work(void* fname) {
       vs[i] = 0;
       while (vs[i] != 2) {
         alloc->Get(i, &vs[i]);
-        epicLog(LOG_WARNING, "waiting %d", i);
       }
     }
     pthread_cond_broadcast(&cv);
@@ -222,6 +221,8 @@ void* do_work(void* fname) {
 
 int main(int argc, char* argv[]) {
 
+  conf.loglevel = LOG_DEBUG;
+
   for(int i = 1; i < argc; i++) {
     if(strcmp(argv[i], "--ip_master") == 0) {
       ip_master = argv[++i];
@@ -247,18 +248,21 @@ int main(int argc, char* argv[]) {
       cache_th = atoi(argv[++i]);
     } else if (strcmp(argv[i], "--ycsb_dir") == 0) {
       ycsb_dir = argv[++i];
+    } else if (strcmp(argv[i], "--log_level") == 0) {
+      conf.loglevel = atoi(argv[++i]);
+    } else if (strcmp(argv[i], "--iter") == 0) {
+      iter = atoi(argv[++i]);
     } else {
       fprintf(stderr, "Unrecognized option %s for benchmark\n", argv[i]);
     }
   }
 
-  conf.loglevel = LOG_WARNING;
   conf.is_master = is_master;
   conf.master_ip = ip_master;
   conf.master_port = port_master;
   conf.worker_ip = ip_worker;
   conf.worker_port = port_worker;
-  conf.size = (1UL << 34); // 16GB
+  conf.size = (1UL << 33); // 8GB
   conf.cache_th = (double)cache_th/100;
 
   GAlloc* alloc = GAllocFactory::CreateAllocator(&conf);

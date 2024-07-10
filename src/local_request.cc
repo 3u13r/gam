@@ -29,7 +29,11 @@
 int Worker::ProcessLocalHTable(WorkRequest* pwr) {
     pwr->id = this->GetWorkPsn();
 
+    epicLog(LOG_DEBUG, "ProcessLocalHTable: wid = %d, id = %d, op = %d, key = %d, addr = %lx, size = %d, flag = %d, fd = %d",
+            this->GetWorkerId(), pwr->id, pwr->op, pwr->key, pwr->addr, pwr->size, pwr->flag, pwr->fd);
+
     uint64_t mem = this->FindClientWid(GetWorkerId())->GetTotalMem();
+    epicLog(LOG_DEBUG, "ProcessLocalHTable: mem = %lu", mem);
     if (mem > 0)
         this->ProcessHTableReply(NULL, pwr);
 
@@ -259,7 +263,7 @@ int Worker::ProcessLocalSFence(WorkRequest* wr) {
 int Worker::ProcessLocalRequest(WorkRequest* wr) {
   epicLog(
       LOG_DEBUG,
-      "wr->code = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
+      "wr->op = %d, wr->flag = %d, wr->addr = %lx, wr->size = %d, wr->fd = %d\n",
       wr->op, wr->flag, wr->addr, wr->size, wr->fd);
   int ret = SUCCESS;
   if (MALLOC == wr->op) {

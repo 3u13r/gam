@@ -143,8 +143,9 @@ void Master::ProcessRequest(Client* client, WorkRequest* wr) {
       if (send_buf == nullptr) {
         busy = true;
         send_buf = (char *) zmalloc(MAX_REQUEST_SIZE);
-        epicLog(LOG_INFO,
+        epicLog(LOG_WARNING,
                 "We don't have enough slot buf, we use local buf instead");
+        exit(1);
       }
 
       int n = 0, i = 0;
@@ -160,6 +161,8 @@ void Master::ProcessRequest(Client* client, WorkRequest* wr) {
       lwr.ptr = buf;
       int len = 0, ret;
       lwr.Ser(send_buf, len);
+      epicLog(LOG_WARNING, "send FETCH_MEM_STATS_REPLY to worker %d, len = %d",
+              client->GetWorkerId(), len);
       if ((ret = client->Send(send_buf, len)) != len) {
         epicAssert(ret == -1);
         epicLog(LOG_INFO, "slots are busy");
@@ -201,8 +204,9 @@ void Master::ProcessRequest(Client* client, WorkRequest* wr) {
         if (send_buf == nullptr) {
           busy = true;
           send_buf = (char *) zmalloc(MAX_REQUEST_SIZE);
-          epicLog(LOG_INFO,
+          epicLog(LOG_WARNING,
                   "We don't have enough slot buf, we use local buf instead");
+          exit(1);
         }
 
         int len = 0, ret;
@@ -235,11 +239,13 @@ void Master::Broadcast(const char* buf, size_t len) {
     if (send_buf == nullptr) {
       busy = true;
       send_buf = (char *) zmalloc(MAX_REQUEST_SIZE);
-      epicLog(LOG_INFO,
+      epicLog(LOG_WARNING,
               "We don't have enough slot buf, we use local buf instead");
+      exit(1);
     }
     memcpy(send_buf, buf, len);
 
+    epicLog(LOG_WARNING, "broadcast to worker %d, len = %d", entry.second->GetWorkerId(), len);
     size_t sent = entry.second->Send(send_buf, len);
     epicAssert((busy && sent == -1) || !busy);
     if (len != sent) {

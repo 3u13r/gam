@@ -139,6 +139,10 @@ int WorkRequest::Ser(char* buf, int& len) {
       break;
   }
   buf[len] = '\0';
+  // Print the serialized buffer as hex
+  // for (int i = 0; i < len; i++) {
+  //   epicLog(LOG_WARNING, "[SER] buf[%d] = %x", i, buf[i]);
+  // }
   epicLog(LOG_DEBUG, "ser %s", buf);
   return 0;
 }
@@ -277,7 +281,7 @@ int WorkRequest::Deser(const char* buf, int& len) {
       break;
 
     default:
-      epicLog(LOG_WARNING, "unrecognized op code %d", op);
+      epicLog(LOG_WARNING, "unrecognized op code %d, len = %d", op, len);
       break;
   }
 

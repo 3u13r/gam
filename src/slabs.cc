@@ -67,6 +67,7 @@ void* SlabAllocator::mmap_malloc(size_t size) {
     perror("map failed");
     return NULL;
   }
+  memset(ret, 0, size);
   uint64_t uret = (uint64_t) ret;
   if (uret % BLOCK_SIZE) {
     uret += (BLOCK_SIZE - (uret % BLOCK_SIZE));
@@ -76,6 +77,7 @@ void* SlabAllocator::mmap_malloc(size_t size) {
 //	if(posix_memalign(&ret, BLOCK_SIZE, size)){
 //		epicLog(LOG_FATAL, "allocate memory %ld failed (%d:%s)", size, errno, strerror(errno));
 //	}
+  epicLog(LOG_DEBUG, "slabs @ %lx\n", mem_base);
   return ret;
 }
 

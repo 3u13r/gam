@@ -5,7 +5,7 @@ import numpy as np
 
 filename = 'zipf.txt'
 a = 2 
-n = 40000
+n = 4000000
 rng = np.random.default_rng()
 s = rng.zipf(a, n)
 

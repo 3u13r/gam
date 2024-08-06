@@ -671,7 +671,7 @@ ssize_t RdmaContext::Rdma(ibv_wr_opcode op, const void* src, size_t len,
   wr.num_sge = len == 0 ? 0 : 1;
   wr.next = nullptr;
   wr.send_flags = 0;
-  if (len <= MAX_RDMA_INLINE_SIZE) {
+  if (len <= MAX_RDMA_INLINE_SIZE && len > 0) {
     epicLog(LOG_INFO, "inline %s\n", (char* )sge_list.addr);
     wr.send_flags = IBV_SEND_INLINE;
   }
@@ -922,13 +922,13 @@ void RdmaContext::ProcessPendingRequests(int n) {
     }
     for (int k = 0; k < j - 1; k++) {
       wrs[k].next = &wrs[k + 1];
-      if (wrs[k].sg_list->length <= MAX_RDMA_INLINE_SIZE) {
+      if (wrs[k].sg_list->length <= MAX_RDMA_INLINE_SIZE && wrs[k].sg_list->length > 0) {
         wrs[k].send_flags |= IBV_SEND_INLINE;
         epicLog(LOG_INFO, "inline %s\n", (char* )wrs[k].sg_list->addr);
       }
     }
     wrs[j - 1].next = nullptr;
-    if (wrs[j - 1].sg_list->length <= MAX_RDMA_INLINE_SIZE) {
+    if (wrs[j - 1].sg_list->length <= MAX_RDMA_INLINE_SIZE && wrs[j - 1].sg_list->length > 0) {
       wrs[j - 1].send_flags |= IBV_SEND_INLINE;
       epicLog(LOG_INFO, "inline %s\n", (char* )wrs[j - 1].sg_list->addr);
     }
